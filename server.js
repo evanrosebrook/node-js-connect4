@@ -6,6 +6,8 @@ var express = require('express'),
 	port = Number(process.env.PORT || 3000),
 	io = require('socket.io').listen(server);
 
+const base64id = require("base64id");
+
 server.listen(port);
 
 /*routing*/
@@ -22,6 +24,26 @@ app.get('/', function(req, res){
 
 app.get('/:room([A-Za-z0-9]{6})', function(req, res) {
 	res.sendFile(__dirname+'/index.html');
+});
+
+app.get('/drop_token/:room([A-Za-z0-9]{6})/moves', function(req,res) {
+	//todo: needs to accept start and until. and return 400 for malformed
+	if('room' in req.params && req.params['room'] in game_logic.games) {
+		const moves = game_logic.games[req.params['room']].move_history;
+		res.json(moves);
+	} else {
+		res.status(404).send('Game/moves not found');
+	}	
+});
+
+app.get('/drop_token/:room([A-Za-z0-9]{6})', function(req,res) {
+	//todo: needs to return game state
+	if('room' in req.params && req.params['room'] in game_logic.games) {
+		const resp = game
+		res.json(moves);
+	} else {
+		res.status(404).send('Game/moves not found');
+	}	
 });
 
 function generateHash(length) {
@@ -46,7 +68,7 @@ io.sockets.on('connection', function(socket){
 			socket.join(data.room);
 			socket.room = data.room;
 			socket.pid = 2;
-			socket.hash = generateHash(8);
+			socket.hash = base64id.generateId();
 			game.player2 = socket;
 			socket.opponent = game.player1;
 			game.player1.opponent = socket;
@@ -55,13 +77,14 @@ io.sockets.on('connection', function(socket){
 			socket.broadcast.to(data.room).emit('start');
 		}else{
 			console.log('player 1 is here');
-			if(socket.rooms.indexOf(data.room) <= 0) socket.join(data.room);
+			if(data.room in socket.rooms <= 0) socket.join(data.room);
 			socket.room = data.room;
 			socket.pid = 1;
-			socket.hash = generateHash(8);
+			socket.hash = base64id.generateId();
 			game_logic.games[data.room] = {
 				player1: socket,
 				moves: 0,
+				move_history: [],
 				board: [[0,0,0,0,0,0,0],
 						[0,0,0,0,0,0,0],
 						[0,0,0,0,0,0,0],
@@ -73,6 +96,7 @@ io.sockets.on('connection', function(socket){
 		}
 
 		socket.on('makeMove', function(data){
+			socket.hash = base64id.generateId();
 			var game = game_logic.games[socket.room];
 			if(data.hash = socket.hash && game.turn == socket.pid){
 				var move_made = game_logic.make_move(socket.room, data.col, socket.pid);

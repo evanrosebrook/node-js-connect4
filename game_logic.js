@@ -10,7 +10,15 @@ module.exports = {
 				break;
 			}
 		}
+		if(move_made){
+			this.games[room].move_history.push({type: "MOVE", player: "player" + pid, column:col});
+			console.log(this.games[room].moves);	
+		}
+
 		return move_made;
+	},
+	get_state: function(room){
+		return {};
 	},
 	check_for_win : function(board){
 		var found = 0,
